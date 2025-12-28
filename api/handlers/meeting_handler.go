@@ -49,3 +49,29 @@ func (h *MeetingHandler) GetNearby(c *gin.Context) {
 
 	c.JSON(http.StatusOK, meetings)
 }
+
+func (h *MeetingHandler) Join(c *gin.Context) {
+	meetingID := c.Param("id")
+	userID, _ := c.Get("user_id")
+
+	err := h.service.JoinMeeting(c.Request.Context(), meetingID, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully joined the meeting"})
+}
+
+func (h *MeetingHandler) Leave(c *gin.Context) {
+	meetingID := c.Param("id")
+	userID, _ := c.Get("user_id")
+
+	err := h.service.LeaveMeeting(c.Request.Context(), meetingID, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully left the meeting"})
+}

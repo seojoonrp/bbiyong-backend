@@ -4,6 +4,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
@@ -14,6 +15,8 @@ import (
 type MeetingService interface {
 	CreateMeeting(ctx context.Context, hostID string, req models.CreateMeetingRequest) error
 	GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64) ([]models.Meeting, error)
+	JoinMeeting(ctx context.Context, meetingID, userID string) error
+	LeaveMeeting(ctx context.Context, meetingID, userID string) error
 }
 
 type meetingService struct {
@@ -40,7 +43,7 @@ func (s *meetingService) CreateMeeting(ctx context.Context, hostID string, req m
 		MaxParticipants: req.MaxParticipants,
 		AgeRange:        req.AgeRange,
 		MeetingTime:     req.MeetingTime,
-		Status:          "RECRUITING",
+		Status:          models.MeetingStatusRecruiting,
 		CreatedAt:       time.Now(),
 	}
 
@@ -52,4 +55,49 @@ func (s *meetingService) GetNearbyMeetings(ctx context.Context, lon, lat float64
 		radius = 3000 // 기본 3km
 	}
 	return s.repo.FindNearby(ctx, lon, lat, radius)
+}
+
+func (s *meetingService) JoinMeeting(ctx context.Context, meetingID string, userID string) error {
+	mID, _ := primitive.ObjectIDFromHex(meetingID)
+	uID, _ := primitive.ObjectIDFromHex(userID)
+
+	meeting, err := s.repo.FindByID(ctx, mID)
+	if err != nil || meeting == nil {
+		return errors.New("meeting not found")
+	}
+
+	success, err := s.repo.AddParticipant(ctx, mID, uID, meeting.MaxParticipants)
+	if err != nil {
+		return err
+	}
+	if !success {
+		return errors.New("failed to join the meeting")
+	}
+
+	return nil
+}
+
+func (s *meetingService) LeaveMeeting(ctx context.Context, meetingID string, userID string) error {
+	mID, _ := primitive.ObjectIDFromHex(meetingID)
+	uID, _ := primitive.ObjectIDFromHex(userID)
+
+	meeting, err := s.repo.FindByID(ctx, mID)
+	if err != nil || meeting == nil {
+		return errors.New("meeting not found")
+	}
+
+	// 방장은 못나감
+	if meeting.HostID == uID {
+		return errors.New("host cannot leave the meeting")
+	}
+
+	success, err := s.repo.RemoveParticipant(ctx, mID, uID, meeting.MaxParticipants)
+	if err != nil {
+		return err
+	}
+	if !success {
+		return errors.New("failed to leave the meeting")
+	}
+
+	return nil
 }

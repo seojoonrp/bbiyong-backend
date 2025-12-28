@@ -48,6 +48,8 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 			protected.POST("/meetings", meetingHandler.CreateMeeting)
 			protected.GET("/meetings/nearby", meetingHandler.GetNearby)
+			protected.POST("/meetings/:id/join", meetingHandler.Join)
+			protected.POST("/meetings/:id/leave", meetingHandler.Leave)
 		}
 	}
 }
