@@ -20,8 +20,13 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	userRepo := repositories.NewUserRepository(db)
+	meetingRepo := repositories.NewMeetingRepository(db)
+
 	authService := services.NewAuthService(userRepo)
+	meetingService := services.NewMeetingService(meetingRepo)
+
 	authHandler := handlers.NewAuthHandler(authService)
+	meetingHandler := handlers.NewMeetingHandler(meetingService)
 
 	apiV1 := router.Group("/api/v1")
 	{
@@ -40,6 +45,11 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		protected.Use(middleware.AuthMiddleware())
 		{
 			protected.POST("/auth/profile", authHandler.SetProfile)
+
+			protected.POST("/meetings", meetingHandler.CreateMeeting)
+			protected.GET("/meetings/nearby", meetingHandler.GetNearby)
+			protected.POST("/meetings/:id/join", meetingHandler.Join)
+			protected.POST("/meetings/:id/leave", meetingHandler.Leave)
 		}
 	}
 }
