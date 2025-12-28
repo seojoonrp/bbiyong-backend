@@ -34,7 +34,7 @@ func ConnectDB() (*mongo.Client, error) {
 // 2dsphere 인덱스 생성
 func createGeoIndex(client *mongo.Client) {
 	coll := client.Database(config.AppConfig.DBName).Collection("meetings")
-	
+
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{{Key: "location", Value: "2dsphere"}},
 	}
