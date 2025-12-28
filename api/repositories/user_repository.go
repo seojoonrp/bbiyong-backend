@@ -7,12 +7,14 @@ import (
 
 	"github.com/seojoonrp/bbiyong-backend/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
+	UpdateProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) error
 }
 
 type userRepository struct {
@@ -40,4 +42,13 @@ func (r *userRepository) FindByUsername(ctx context.Context, username string) (*
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepository) UpdateProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": updates},
+	)
+	return err
 }

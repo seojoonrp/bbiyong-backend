@@ -9,6 +9,7 @@ import (
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
+	"github.com/seojoonrp/bbiyong-backend/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -33,6 +34,12 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.GET("/check-username", authHandler.CheckUsername)
+		}
+
+		protected := apiV1.Group("/")
+		protected.Use(middleware.AuthMiddleware())
+		{
+			protected.POST("/auth/profile", authHandler.SetProfile)
 		}
 	}
 }

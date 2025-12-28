@@ -10,6 +10,8 @@ import (
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
 	"github.com/seojoonrp/bbiyong-backend/models"
 	"github.com/seojoonrp/bbiyong-backend/utils"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,6 +19,7 @@ type AuthService interface {
 	Register(ctx context.Context, req models.RegisterRequest) (string, error)
 	Login(ctx context.Context, req models.LoginRequest) (string, error)
 	IsUsernameAvailable(ctx context.Context, username string) (bool, error)
+	CompleteProfile(ctx context.Context, userID string, req models.SetProfileRequest) error
 }
 
 type authService struct {
@@ -68,4 +71,21 @@ func (s *authService) IsUsernameAvailable(ctx context.Context, username string) 
 		return false, err
 	}
 	return user == nil, nil
+}
+
+func (s *authService) CompleteProfile(ctx context.Context, userID string, req models.SetProfileRequest) error {
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("invalid user id format")
+	}
+
+	// TODO : IsProfileSet이 false일 때만 업데이트되도록 수정
+
+	// TODO : 다른 필드들 추가하기
+	updates := bson.M{
+		"nickname":       req.Nickname,
+		"is_profile_set": true,
+	}
+
+	return s.repo.UpdateProfile(ctx, objID, updates)
 }

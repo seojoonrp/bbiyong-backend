@@ -65,3 +65,25 @@ func (h *AuthHandler) CheckUsername(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"isAvailable": available})
 }
+
+func (h *AuthHandler) SetProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req models.SetProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.authService.CompleteProfile(c.Request.Context(), userID.(string), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to complete profile: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "profile completed successfully"})
+}

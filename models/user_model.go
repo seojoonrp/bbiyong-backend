@@ -29,3 +29,8 @@ type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
+
+type SetProfileRequest struct {
+	Nickname string `json:"nickname" binding:"required"`
+	// TODO : 나중에 프사, 생년월일, 성별 등 추가해야됨
+}
