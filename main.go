@@ -37,13 +37,16 @@ func main() {
 
 	userRepo := repositories.NewUserRepository(db)
 	meetingRepo := repositories.NewMeetingRepository(db)
+	chatRepo := repositories.NewChatRepository(db)
 
 	authService := services.NewAuthService(userRepo)
+	userService := services.NewUserService(userRepo)
 	meetingService := services.NewMeetingService(meetingRepo)
+	chatService := services.NewChatService(chatRepo, userRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	meetingHandler := handlers.NewMeetingHandler(meetingService)
-	chatHandler := handlers.NewChatHandler(chatHub)
+	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService)
 
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
