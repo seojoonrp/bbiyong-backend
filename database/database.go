@@ -26,7 +26,7 @@ func ConnectDB() (*mongo.Client, error) {
 
 	log.Println("Successfully Connected to MongoDB!")
 
-	// createGeoIndex(client)
+	createGeoIndex(client)
 	createUserIndex(client)
 
 	return client, nil
