@@ -13,6 +13,7 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
 	UpdateProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) error
 }
@@ -35,6 +36,18 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 func (r *userRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
 	var user models.User
 	err := r.collection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
+	var user models.User
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil

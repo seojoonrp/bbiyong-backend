@@ -7,26 +7,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
-	"github.com/seojoonrp/bbiyong-backend/api/repositories"
-	"github.com/seojoonrp/bbiyong-backend/api/services"
-	"github.com/seojoonrp/bbiyong-backend/middleware"
+	"github.com/seojoonrp/bbiyong-backend/api/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func SetupRoutes(router *gin.Engine, db *mongo.Database) {
+func SetupRoutes(
+	router *gin.Engine,
+	db *mongo.Database,
+	authHandler *handlers.AuthHandler,
+	meetingHandler *handlers.MeetingHandler,
+	chatHandler *handlers.ChatHandler,
+) {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	userRepo := repositories.NewUserRepository(db)
-	meetingRepo := repositories.NewMeetingRepository(db)
-
-	authService := services.NewAuthService(userRepo)
-	meetingService := services.NewMeetingService(meetingRepo)
-
-	authHandler := handlers.NewAuthHandler(authService)
-	meetingHandler := handlers.NewMeetingHandler(meetingService)
 
 	apiV1 := router.Group("/api/v1")
 	{
@@ -50,6 +45,8 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			protected.GET("/meetings/nearby", meetingHandler.GetNearby)
 			protected.POST("/meetings/:id/join", meetingHandler.Join)
 			protected.POST("/meetings/:id/leave", meetingHandler.Leave)
+
+			protected.GET("/ws/meetings/:id", chatHandler.ChatConnect)
 		}
 	}
 }

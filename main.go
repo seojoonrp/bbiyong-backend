@@ -7,7 +7,11 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/seojoonrp/bbiyong-backend/api/handlers"
+	"github.com/seojoonrp/bbiyong-backend/api/repositories"
 	"github.com/seojoonrp/bbiyong-backend/api/routes"
+	"github.com/seojoonrp/bbiyong-backend/api/services"
+	"github.com/seojoonrp/bbiyong-backend/api/ws"
 	"github.com/seojoonrp/bbiyong-backend/config"
 	"github.com/seojoonrp/bbiyong-backend/database"
 )
@@ -28,10 +32,26 @@ func main() {
 
 	db := client.Database(config.AppConfig.DBName)
 
+	chatHub := ws.NewHub()
+	go chatHub.Run()
+
+	userRepo := repositories.NewUserRepository(db)
+	meetingRepo := repositories.NewMeetingRepository(db)
+	chatRepo := repositories.NewChatRepository(db)
+
+	authService := services.NewAuthService(userRepo)
+	userService := services.NewUserService(userRepo)
+	meetingService := services.NewMeetingService(meetingRepo)
+	chatService := services.NewChatService(chatRepo, userRepo)
+
+	authHandler := handlers.NewAuthHandler(authService)
+	meetingHandler := handlers.NewMeetingHandler(meetingService)
+	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService)
+
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
 
-	routes.SetupRoutes(router, db)
+	routes.SetupRoutes(router, db, authHandler, meetingHandler, chatHandler)
 
 	port := config.AppConfig.Port
 	log.Printf("Starting server on port %s.", port)
