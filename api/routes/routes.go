@@ -47,6 +47,7 @@ func SetupRoutes(
 			protected.POST("/meetings/:id/leave", meetingHandler.Leave)
 
 			protected.GET("/ws/meetings/:id", chatHandler.ChatConnect)
+			protected.GET("/meetings/:id/chats", chatHandler.GetChatHistory)
 		}
 	}
 }

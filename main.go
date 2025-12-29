@@ -42,7 +42,7 @@ func main() {
 	authService := services.NewAuthService(userRepo)
 	userService := services.NewUserService(userRepo)
 	meetingService := services.NewMeetingService(meetingRepo)
-	chatService := services.NewChatService(chatRepo, userRepo)
+	chatService := services.NewChatService(chatRepo, userRepo, meetingRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	meetingHandler := handlers.NewMeetingHandler(meetingService)

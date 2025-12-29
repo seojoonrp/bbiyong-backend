@@ -5,6 +5,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -73,4 +74,34 @@ func (h *ChatHandler) ChatConnect(c *gin.Context) {
 
 	go client.WritePump()
 	go client.ReadPump()
+}
+
+func (h *ChatHandler) GetChatHistory(c *gin.Context) {
+	meetingIDStr := c.Param("id")
+	userID, _ := c.Get("user_id")
+
+	mID, err := primitive.ObjectIDFromHex(meetingIDStr)
+	uID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+		return
+	}
+
+	limitStr := c.Query("limit")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil || limit <= 0 {
+		limit = 50
+	}
+
+	// TODO : Last ID 등의 파라미터를 통해 페이징 처리 구현
+	history, err := h.chatService.GetChatHistory(c.Request.Context(), mID, uID, limit)
+	if err != nil {
+		if err.Error() == "user is not a participant of the meeting" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch chat history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
 }

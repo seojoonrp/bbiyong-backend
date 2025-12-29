@@ -4,6 +4,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
@@ -13,16 +14,17 @@ import (
 
 type ChatService interface {
 	SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error)
-	GetChatHistory(ctx context.Context, meetingID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
+	GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
 }
 
 type chatService struct {
-	chatRepo repositories.ChatRepository
-	userRepo repositories.UserRepository
+	chatRepo    repositories.ChatRepository
+	userRepo    repositories.UserRepository
+	meetingRepo repositories.MeetingRepository
 }
 
-func NewChatService(cr repositories.ChatRepository, ur repositories.UserRepository) ChatService {
-	return &chatService{chatRepo: cr, userRepo: ur}
+func NewChatService(cr repositories.ChatRepository, ur repositories.UserRepository, mr repositories.MeetingRepository) ChatService {
+	return &chatService{chatRepo: cr, userRepo: ur, meetingRepo: mr}
 }
 
 func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error) {
@@ -41,6 +43,26 @@ func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.Object
 	return msg, err
 }
 
-func (s *chatService) GetChatHistory(ctx context.Context, meetingID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
-	return s.chatRepo.GetChatHistory(ctx, meetingID, limit)
+func (s *chatService) GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
+	meeting, err := s.meetingRepo.FindByID(ctx, mID)
+	if err != nil {
+		return nil, err
+	}
+	if meeting == nil {
+		return nil, errors.New("meeting not found")
+	}
+
+	isParticipant := false
+	for _, pID := range meeting.Participants {
+		if pID == uID {
+			isParticipant = true
+			break
+		}
+	}
+
+	if !isParticipant {
+		return nil, errors.New("user is not a participant of the meeting")
+	}
+
+	return s.chatRepo.GetChatHistory(ctx, mID, limit)
 }
