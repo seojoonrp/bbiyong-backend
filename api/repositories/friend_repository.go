@@ -76,8 +76,9 @@ func (r *friendRepository) GetFriendList(ctx context.Context, uID primitive.Obje
 	}
 
 	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: matchStage}},
+		{{Key: "$match", Value: matchStage}}, // matchStage 필터링
 		{{Key: "$addFields", Value: bson.M{
+			// 상대방 ID 찾기. 엑셀 if문이랑 비슷한듯
 			"target_id": bson.M{
 				"$cond": bson.A{
 					bson.M{"$eq": bson.A{"$requester_id", uID}},
@@ -86,14 +87,15 @@ func (r *friendRepository) GetFriendList(ctx context.Context, uID primitive.Obje
 				},
 			},
 		}}},
+		// 상대방 ID를 바탕으로 users 콜렉션에서 정보를 friend_detail로 가져오기
 		{{Key: "$lookup", Value: bson.M{
 			"from":         "users",
 			"localField":   "target_id",
 			"foreignField": "_id",
 			"as":           "friend_detail",
 		}}},
-		{{Key: "$unwind", Value: "$friend_detail"}},
-		{{Key: "$project", Value: bson.M{
+		{{Key: "$unwind", Value: "$friend_detail"}}, // 배열을 단일 객체로 펼치기
+		{{Key: "$project", Value: bson.M{ // 최종 쿼리 결과
 			"friendshipID": "$_id",
 			"friendID":     "$target_id",
 			"nickname":     "$friend_detail.nickname",
