@@ -5,8 +5,8 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 const (
-	EventJoinMeeting  = "join"
-	EventLeaveMeeting = "leave"
+	EventJoinMeeting  = "JOIN"
+	EventLeaveMeeting = "LEAVE"
 )
 
 type MeetingEvent struct {

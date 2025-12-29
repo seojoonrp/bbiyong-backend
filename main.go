@@ -42,22 +42,32 @@ func main() {
 	userRepo := repositories.NewUserRepository(db)
 	meetingRepo := repositories.NewMeetingRepository(db)
 	chatRepo := repositories.NewChatRepository(db)
+	friendRepo := repositories.NewFriendRepository(db)
 
 	authService := services.NewAuthService(userRepo)
 	userService := services.NewUserService(userRepo)
 	meetingService := services.NewMeetingService(meetingRepo, meetingEventChan)
 	chatService := services.NewChatService(chatRepo, userRepo, meetingRepo)
+	friendService := services.NewFriendService(friendRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	meetingHandler := handlers.NewMeetingHandler(meetingService)
 	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService)
+	friendHandler := handlers.NewFriendHandler(friendService)
 
 	go events.StartMeetingWorker(meetingEventChan, chatService, chatHub)
 
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
 
-	routes.SetupRoutes(router, db, authHandler, meetingHandler, chatHandler)
+	routes.SetupRoutes(
+		router,
+		db,
+		authHandler,
+		meetingHandler,
+		chatHandler,
+		friendHandler,
+	)
 
 	port := config.AppConfig.Port
 	log.Printf("Starting server on port %s.", port)

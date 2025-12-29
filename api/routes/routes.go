@@ -20,6 +20,7 @@ func SetupRoutes(
 	authHandler *handlers.AuthHandler,
 	meetingHandler *handlers.MeetingHandler,
 	chatHandler *handlers.ChatHandler,
+	friendHandler *handlers.FriendHandler,
 ) {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -39,7 +40,7 @@ func SetupRoutes(
 		protected := apiV1.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
-			protected.POST("/auth/profile", authHandler.SetProfile)
+			protected.POST("/user/profile", authHandler.SetProfile)
 
 			protected.POST("/meetings", meetingHandler.CreateMeeting)
 			protected.GET("/meetings/nearby", meetingHandler.GetNearby)
@@ -48,6 +49,10 @@ func SetupRoutes(
 
 			protected.GET("/ws/meetings/:id", chatHandler.ChatConnect)
 			protected.GET("/meetings/:id/chats", chatHandler.GetChatHistory)
+
+			protected.POST("/users/:id/friend", friendHandler.RequestFriend)
+			protected.PATCH("/friendships/:id/accept", friendHandler.AcceptFriend)
+			protected.GET("/friends", friendHandler.GetFriendList)
 		}
 	}
 }

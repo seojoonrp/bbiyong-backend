@@ -15,10 +15,10 @@ type Location struct {
 }
 
 const (
-	MeetingStatusRecruiting = "recruiting"
-	MeetingStatusFull       = "full"
-	MeetingStatusOngoing    = "ongoing"
-	MeetingStatusFinished   = "finished"
+	MeetingStatusRecruiting = "RECRUITING"
+	MeetingStatusFull       = "FULL"
+	MeetingStatusOngoing    = "ONGOING"
+	MeetingStatusFinished   = "FINISHED"
 )
 
 type Meeting struct {
