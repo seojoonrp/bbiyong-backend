@@ -20,11 +20,12 @@ type MeetingService interface {
 }
 
 type meetingService struct {
-	repo repositories.MeetingRepository
+	meetingRepo repositories.MeetingRepository
+	eventChan   chan<- models.MeetingEvent
 }
 
-func NewMeetingService(repo repositories.MeetingRepository) MeetingService {
-	return &meetingService{repo: repo}
+func NewMeetingService(repo repositories.MeetingRepository, ec chan<- models.MeetingEvent) MeetingService {
+	return &meetingService{meetingRepo: repo, eventChan: ec}
 }
 
 func (s *meetingService) CreateMeeting(ctx context.Context, hostID string, req models.CreateMeetingRequest) error {
@@ -47,31 +48,40 @@ func (s *meetingService) CreateMeeting(ctx context.Context, hostID string, req m
 		CreatedAt:       time.Now(),
 	}
 
-	return s.repo.Create(ctx, &meeting)
+	return s.meetingRepo.Create(ctx, &meeting)
 }
 
 func (s *meetingService) GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64) ([]models.Meeting, error) {
 	if radius == 0 {
 		radius = 3000 // 기본 3km
 	}
-	return s.repo.FindNearby(ctx, lon, lat, radius)
+	return s.meetingRepo.FindNearby(ctx, lon, lat, radius)
 }
 
 func (s *meetingService) JoinMeeting(ctx context.Context, meetingID string, userID string) error {
-	mID, _ := primitive.ObjectIDFromHex(meetingID)
-	uID, _ := primitive.ObjectIDFromHex(userID)
+	mID, err := primitive.ObjectIDFromHex(meetingID)
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return errors.New("invalid ID format")
+	}
 
-	meeting, err := s.repo.FindByID(ctx, mID)
+	meeting, err := s.meetingRepo.FindByID(ctx, mID)
 	if err != nil || meeting == nil {
 		return errors.New("meeting not found")
 	}
 
-	success, err := s.repo.AddParticipant(ctx, mID, uID, meeting.MaxParticipants)
+	success, err := s.meetingRepo.AddParticipant(ctx, mID, uID, meeting.MaxParticipants)
 	if err != nil {
 		return err
 	}
 	if !success {
 		return errors.New("failed to join the meeting")
+	}
+
+	s.eventChan <- models.MeetingEvent{
+		Type:      models.EventJoinMeeting,
+		MeetingID: mID,
+		UserID:    uID,
 	}
 
 	return nil
@@ -81,7 +91,7 @@ func (s *meetingService) LeaveMeeting(ctx context.Context, meetingID string, use
 	mID, _ := primitive.ObjectIDFromHex(meetingID)
 	uID, _ := primitive.ObjectIDFromHex(userID)
 
-	meeting, err := s.repo.FindByID(ctx, mID)
+	meeting, err := s.meetingRepo.FindByID(ctx, mID)
 	if err != nil || meeting == nil {
 		return errors.New("meeting not found")
 	}
@@ -91,7 +101,7 @@ func (s *meetingService) LeaveMeeting(ctx context.Context, meetingID string, use
 		return errors.New("host cannot leave the meeting")
 	}
 
-	success, err := s.repo.RemoveParticipant(ctx, mID, uID, meeting.MaxParticipants)
+	success, err := s.meetingRepo.RemoveParticipant(ctx, mID, uID, meeting.MaxParticipants)
 	if err != nil {
 		return err
 	}

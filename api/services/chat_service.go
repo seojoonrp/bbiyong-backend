@@ -4,6 +4,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
@@ -13,16 +14,18 @@ import (
 
 type ChatService interface {
 	SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error)
-	GetChatHistory(ctx context.Context, meetingID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
+	SaveSystemMessage(ctx context.Context, mID, uID primitive.ObjectID, eventType string) (*models.ChatMessage, error)
+	GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
 }
 
 type chatService struct {
-	chatRepo repositories.ChatRepository
-	userRepo repositories.UserRepository
+	chatRepo    repositories.ChatRepository
+	userRepo    repositories.UserRepository
+	meetingRepo repositories.MeetingRepository
 }
 
-func NewChatService(cr repositories.ChatRepository, ur repositories.UserRepository) ChatService {
-	return &chatService{chatRepo: cr, userRepo: ur}
+func NewChatService(cr repositories.ChatRepository, ur repositories.UserRepository, mr repositories.MeetingRepository) ChatService {
+	return &chatService{chatRepo: cr, userRepo: ur, meetingRepo: mr}
 }
 
 func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error) {
@@ -41,6 +44,67 @@ func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.Object
 	return msg, err
 }
 
-func (s *chatService) GetChatHistory(ctx context.Context, meetingID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
-	return s.chatRepo.GetChatHistory(ctx, meetingID, limit)
+func (s *chatService) SaveSystemMessage(ctx context.Context, mID, uID primitive.ObjectID, eventType string) (*models.ChatMessage, error) {
+	user, err := s.userRepo.FindByID(ctx, uID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	var content, chatType string
+	switch eventType {
+	case models.EventJoinMeeting:
+		content = user.Nickname + "님이 참여했습니다."
+		chatType = models.ChatTypeJoin
+	case models.EventLeaveMeeting:
+		content = user.Nickname + "님이 나갔습니다."
+		chatType = models.ChatTypeLeave
+	default:
+		content = "알 수 없는 이벤트가 발생했습니다."
+		chatType = "unknown"
+	}
+
+	msg := &models.ChatMessage{
+		ID:               primitive.NewObjectID(),
+		MeetingID:        mID,
+		SenderID:         uID,
+		SenderName:       "System",
+		SenderProfileURI: "",
+		Content:          content,
+		Type:             chatType,
+		CreatedAt:        time.Now(),
+	}
+
+	err = s.chatRepo.SaveMessage(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+func (s *chatService) GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
+	meeting, err := s.meetingRepo.FindByID(ctx, mID)
+	if err != nil {
+		return nil, err
+	}
+	if meeting == nil {
+		return nil, errors.New("meeting not found")
+	}
+
+	isParticipant := false
+	for _, pID := range meeting.Participants {
+		if pID == uID {
+			isParticipant = true
+			break
+		}
+	}
+
+	if !isParticipant {
+		return nil, errors.New("user is not a participant of the meeting")
+	}
+
+	return s.chatRepo.GetChatHistory(ctx, mID, limit)
 }
