@@ -22,3 +22,12 @@ type Friendship struct {
 	CreatedAt   time.Time          `bson:"created_at" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updated_at" json:"updatedAt"`
 }
+
+type FriendInfo struct {
+	FriendshipID primitive.ObjectID `json:"friendshipID"`
+	FriendID     primitive.ObjectID `json:"friendID"`
+	Nickname     string             `json:"nickname"`
+	ProfileURI   string             `json:"profileURI"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
+	// TODO : 다른 필드들 추가 (레벨 등)
+}

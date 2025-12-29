@@ -15,7 +15,7 @@ import (
 type FriendService interface {
 	RequestFriend(ctx context.Context, reqID, addID primitive.ObjectID) error
 	AcceptFriend(ctx context.Context, fID, uID primitive.ObjectID) error
-	ListFriends(ctx context.Context, userID primitive.ObjectID) ([]models.Friendship, error)
+	ListFriends(ctx context.Context, userID primitive.ObjectID, status string) ([]models.FriendInfo, error)
 }
 
 type friendService struct {
@@ -65,6 +65,6 @@ func (s *friendService) AcceptFriend(ctx context.Context, fID, uID primitive.Obj
 	return s.friendRepo.UpdateStatus(ctx, fID, models.FriendStatusAccepted)
 }
 
-func (s *friendService) ListFriends(ctx context.Context, uID primitive.ObjectID) ([]models.Friendship, error) {
-	return s.friendRepo.GetFriends(ctx, uID)
+func (s *friendService) ListFriends(ctx context.Context, uID primitive.ObjectID, status string) ([]models.FriendInfo, error) {
+	return s.friendRepo.GetFriendList(ctx, uID, status)
 }

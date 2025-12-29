@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
+	"github.com/seojoonrp/bbiyong-backend/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -54,4 +55,27 @@ func (h *FriendHandler) AcceptFriend(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "friend request accepted"})
+}
+
+func (h *FriendHandler) GetFriendList(c *gin.Context) {
+	myIDStr, _ := c.Get("user_id")
+	myID, err := primitive.ObjectIDFromHex(myIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	status := c.DefaultQuery("status", "ACCEPTED")
+
+	friends, err := h.friendService.ListFriends(c.Request.Context(), myID, status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch friend list: " + err.Error()})
+		return
+	}
+
+	if friends == nil {
+		friends = []models.FriendInfo{}
+	}
+
+	c.JSON(http.StatusOK, friends)
 }

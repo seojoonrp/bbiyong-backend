@@ -52,6 +52,7 @@ func SetupRoutes(
 
 			protected.POST("/users/:id/friend", friendHandler.RequestFriend)
 			protected.PATCH("/friendships/:id/accept", friendHandler.AcceptFriend)
+			protected.GET("/friends", friendHandler.GetFriendList)
 		}
 	}
 }
