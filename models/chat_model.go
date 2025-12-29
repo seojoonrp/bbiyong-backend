@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	ChatTypeTalk  = "talk"
-	ChatTypeJoin  = "join"
-	ChatTypeLeave = "leave"
+	ChatTypeTalk  = "TALK"
+	ChatTypeJoin  = "JOIN"
+	ChatTypeLeave = "LEAVE"
 )
 
 type ChatMessage struct {
