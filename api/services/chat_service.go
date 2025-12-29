@@ -15,6 +15,7 @@ import (
 type ChatService interface {
 	SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error)
 	SaveSystemMessage(ctx context.Context, mID, uID primitive.ObjectID, eventType string) (*models.ChatMessage, error)
+	CheckParticipation(ctx context.Context, mID, uID primitive.ObjectID) (bool, error)
 	GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
 }
 
@@ -85,25 +86,38 @@ func (s *chatService) SaveSystemMessage(ctx context.Context, mID, uID primitive.
 	return msg, nil
 }
 
-func (s *chatService) GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
+func (s *chatService) verifyParticipant(ctx context.Context, mID, uID primitive.ObjectID) error {
 	meeting, err := s.meetingRepo.FindByID(ctx, mID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if meeting == nil {
-		return nil, errors.New("meeting not found")
+		return errors.New("meeting not found")
 	}
 
-	isParticipant := false
 	for _, pID := range meeting.Participants {
 		if pID == uID {
-			isParticipant = true
-			break
+			return nil
 		}
 	}
 
-	if !isParticipant {
-		return nil, errors.New("user is not a participant of the meeting")
+	return errors.New("you are not a participant of the meeting")
+}
+
+func (s *chatService) CheckParticipation(ctx context.Context, mID, uID primitive.ObjectID) (bool, error) {
+	err := s.verifyParticipant(ctx, mID, uID)
+	if err != nil {
+		if err.Error() == "you are not a participant of the meeting" {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *chatService) GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
+	if err := s.verifyParticipant(ctx, mID, uID); err != nil {
+		return nil, err
 	}
 
 	return s.chatRepo.GetChatHistory(ctx, mID, limit)
