@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/seojoonrp/bbiyong-backend/api/events"
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
 	"github.com/seojoonrp/bbiyong-backend/api/routes"
@@ -14,6 +15,7 @@ import (
 	"github.com/seojoonrp/bbiyong-backend/api/ws"
 	"github.com/seojoonrp/bbiyong-backend/config"
 	"github.com/seojoonrp/bbiyong-backend/database"
+	"github.com/seojoonrp/bbiyong-backend/models"
 )
 
 // @title 삐용(BBIYONG) API
@@ -35,18 +37,22 @@ func main() {
 	chatHub := ws.NewHub()
 	go chatHub.Run()
 
+	meetingEventChan := make(chan models.MeetingEvent, 100)
+
 	userRepo := repositories.NewUserRepository(db)
 	meetingRepo := repositories.NewMeetingRepository(db)
 	chatRepo := repositories.NewChatRepository(db)
 
 	authService := services.NewAuthService(userRepo)
 	userService := services.NewUserService(userRepo)
-	meetingService := services.NewMeetingService(meetingRepo)
+	meetingService := services.NewMeetingService(meetingRepo, meetingEventChan)
 	chatService := services.NewChatService(chatRepo, userRepo, meetingRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	meetingHandler := handlers.NewMeetingHandler(meetingService)
 	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService)
+
+	go events.StartMeetingWorker(meetingEventChan, chatService, chatHub)
 
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
