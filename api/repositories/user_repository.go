@@ -15,7 +15,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
-	UpdateProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) error
+	CompleteProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) (bool, error)
 }
 
 type userRepository struct {
@@ -57,11 +57,21 @@ func (r *userRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 	return &user, nil
 }
 
-func (r *userRepository) UpdateProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) error {
-	_, err := r.collection.UpdateOne(
+func (r *userRepository) CompleteProfile(ctx context.Context, id primitive.ObjectID, updates bson.M) (bool, error) {
+	result, err := r.collection.UpdateOne(
 		ctx,
-		bson.M{"_id": id},
+		bson.M{
+			"_id":            id,
+			"is_profile_set": false,
+		},
 		bson.M{"$set": updates},
 	)
-	return err
+	if err != nil {
+		return false, err
+	}
+	if result.ModifiedCount == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }

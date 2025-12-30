@@ -40,6 +40,12 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 	user := models.User{
 		Username:     req.Username,
 		Password:     string(hashedPassword),
+		Nickname:     "",
+		ProfileURI:   "",
+		Birthdate:    time.Time{},
+		Gender:       "",
+		Level:        1,
+		Residences:   []string{},
 		Provider:     "local",
 		IsProfileSet: false,
 		CreatedAt:    time.Now(),
@@ -74,18 +80,27 @@ func (s *authService) IsUsernameAvailable(ctx context.Context, username string) 
 }
 
 func (s *authService) CompleteProfile(ctx context.Context, userID string, req models.SetProfileRequest) error {
-	objID, err := primitive.ObjectIDFromHex(userID)
+	uID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return errors.New("invalid user id format")
 	}
 
-	// TODO : IsProfileSet이 false일 때만 업데이트되도록 수정
-
-	// TODO : 다른 필드들 추가하기
 	updates := bson.M{
 		"nickname":       req.Nickname,
+		"profile_uri":    req.ProfileURI,
+		"birthdate":      req.Birthdate,
+		"gender":         req.Gender,
+		"residences":     req.Residences,
 		"is_profile_set": true,
 	}
 
-	return s.repo.UpdateProfile(ctx, objID, updates)
+	success, err := s.repo.CompleteProfile(ctx, uID, updates)
+	if err != nil {
+		return err
+	}
+	if !success {
+		return errors.New("profile is already set")
+	}
+
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/events"
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
@@ -58,6 +59,7 @@ func main() {
 	go events.StartMeetingWorker(meetingEventChan, chatService, chatHub)
 
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.SetTrustedProxies(nil)
 
 	routes.SetupRoutes(

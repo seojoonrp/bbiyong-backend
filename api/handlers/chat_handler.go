@@ -44,6 +44,16 @@ func (h *ChatHandler) ChatConnect(c *gin.Context) {
 		return
 	}
 
+	isParticipant, err := h.chatService.CheckParticipation(c.Request.Context(), mID, uID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check participation"})
+		return
+	}
+	if !isParticipant {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you are not a participant of the meeting"})
+		return
+	}
+
 	user, err := h.userService.GetUserByID(c.Request.Context(), uID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user"})
@@ -96,7 +106,7 @@ func (h *ChatHandler) GetChatHistory(c *gin.Context) {
 	// TODO : Last ID 등의 파라미터를 통해 페이징 처리 구현
 	history, err := h.chatService.GetChatHistory(c.Request.Context(), mID, uID, limit)
 	if err != nil {
-		if err.Error() == "user is not a participant of the meeting" {
+		if err.Error() == "you are not a participant of the meeting" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch chat history"})
