@@ -25,13 +25,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.Register(c.Request.Context(), req)
+	err := h.authService.Register(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register user: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"accessToken": token})
+	c.JSON(http.StatusCreated, gin.H{"message": "user registered successfully"})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

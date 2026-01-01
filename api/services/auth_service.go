@@ -24,7 +24,7 @@ import (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, req models.RegisterRequest) (string, error)
+	Register(ctx context.Context, req models.RegisterRequest) error
 	Login(ctx context.Context, req models.LoginRequest) (string, *models.User, error)
 	LoginWithGoogle(ctx context.Context, idToken string) (bool, string, *models.User, error)
 	LoginWithKakao(ctx context.Context, accessToken string) (bool, string, *models.User, error)
@@ -41,22 +41,22 @@ func NewAuthService(repo repositories.UserRepository) AuthService {
 	return &authService{userRepo: repo}
 }
 
-func (s *authService) Register(ctx context.Context, req models.RegisterRequest) (string, error) {
+func (s *authService) Register(ctx context.Context, req models.RegisterRequest) error {
 	if len(req.Username) < 3 || len(req.Username) > 15 {
-		return "", errors.New("username must be between 3 and 15 characters")
+		return errors.New("username must be between 3 and 15 characters")
 	}
 
 	exists, err := s.userRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if exists != nil {
-		return "", errors.New("username already taken")
+		return errors.New("username already taken")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
 	if err != nil {
-		return "", err
+		return err
 	}
 	user := models.User{
 		Username:     req.Username,
@@ -67,16 +67,16 @@ func (s *authService) Register(ctx context.Context, req models.RegisterRequest) 
 		Gender:       "",
 		Level:        1,
 		Residences:   []string{},
-		Provider:     "local",
+		Provider:     models.ProviderLocal,
 		IsProfileSet: false,
 		CreatedAt:    time.Now(),
 	}
 
 	if err := s.userRepo.Create(ctx, &user); err != nil {
-		return "", err
+		return err
 	}
 
-	return utils.GenerateToken(user.ID.Hex())
+	return nil
 }
 
 func (s *authService) Login(ctx context.Context, req models.LoginRequest) (string, *models.User, error) {
