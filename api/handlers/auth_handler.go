@@ -41,13 +41,91 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.Login(c.Request.Context(), req)
+	token, user, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"accessToken": token})
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user":        user,
+		"isNewUser":   false,
+	})
+}
+
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	var req struct {
+		IDToken string `json:"idToken" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	isNewUser, token, user, err := h.authService.LoginWithGoogle(c.Request.Context(), req.IDToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to login with Google: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user":        user,
+		"isNewUser":   isNewUser,
+	})
+}
+
+func (h *AuthHandler) KakaoLogin(c *gin.Context) {
+	var input struct {
+		AccessToken string `json:"accessToken" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	isNew, token, user, err := h.authService.LoginWithKakao(c.Request.Context(), input.AccessToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Kakao login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user":        user,
+		"isNewUser":   isNew,
+	})
+}
+
+func (h *AuthHandler) AppleLogin(c *gin.Context) {
+	var input struct {
+		IdentityToken string `json:"identityToken" binding:"required"`
+		FullName      struct {
+			GivenName  string `json:"givenName"`
+			FamilyName string `json:"familyName"`
+		} `json:"fullName"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	isNew, token, user, err := h.authService.LoginWithApple(c.Request.Context(), input.IdentityToken)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Apple login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user":        user,
+		"isNewUser":   isNew,
+	})
 }
 
 func (h *AuthHandler) CheckUsername(c *gin.Context) {

@@ -9,6 +9,13 @@ import (
 )
 
 const (
+	ProviderLocal  = "LOCAL"
+	ProviderKakao  = "KAKAO"
+	ProviderGoogle = "GOOGLE"
+	ProviderApple  = "APPLE"
+)
+
+const (
 	GenderMale   = "MALE"
 	GenderFemale = "FEMALE"
 )
@@ -16,7 +23,7 @@ const (
 type User struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Username     string             `bson:"username" json:"username"`
-	Password     string             `bson:"password" json:"-"`
+	Password     string             `bson:"password,omitempty" json:"-"`
 	Nickname     string             `bson:"nickname" json:"nickname"`
 	ProfileURI   string             `bson:"profile_uri" json:"profileURI"`
 	Birthdate    time.Time          `bson:"birthdate" json:"birthdate"`

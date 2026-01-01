@@ -3,6 +3,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
 			return
@@ -22,6 +23,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
 			return []byte(config.AppConfig.JWTSecret), nil
 		})
 
@@ -31,8 +35,21 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := token.Claims.(jwt.MapClaims)
-		c.Set("user_id", claims["user_id"])
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+
+		userID, ok := claims["user_id"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", userID)
 		c.Next()
 	}
 }

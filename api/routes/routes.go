@@ -29,6 +29,9 @@ func SetupRoutes(
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/google", authHandler.GoogleLogin)
+			auth.POST("/kakao", authHandler.KakaoLogin)
+			auth.POST("/apple", authHandler.AppleLogin)
 			auth.GET("/check-username", authHandler.CheckUsername)
 		}
 
