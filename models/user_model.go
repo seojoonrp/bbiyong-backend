@@ -26,11 +26,11 @@ type User struct {
 	Password     string             `bson:"password,omitempty" json:"-"`
 	Nickname     string             `bson:"nickname" json:"nickname"`
 	ProfileURI   string             `bson:"profile_uri" json:"profileURI"`
-	Birthdate    time.Time          `bson:"birthdate" json:"birthdate"`
+	Age          int                `bson:"age" json:"age"`
 	Gender       string             `bson:"gender" json:"gender"`
 	Level        int                `bson:"level" json:"level"`
-	Residences   []string           `bson:"residences" json:"residences"`
-	Provider     string             `bson:"provider" json:"provider"` // local, kakao, google, apple
+	Residence    string             `bson:"residence" json:"residence"`
+	Provider     string             `bson:"provider" json:"provider"`
 	SocialID     string             `bson:"social_id,omitempty" json:"socialID,omitempty"`
 	SocialEmail  string             `bson:"social_email,omitempty" json:"socialEmail,omitempty"`
 	IsProfileSet bool               `bson:"is_profile_set" json:"isProfileSet"`
@@ -48,9 +48,9 @@ type LoginRequest struct {
 }
 
 type SetProfileRequest struct {
-	Nickname   string    `json:"nickname" binding:"required"`
-	ProfileURI string    `json:"profileURI" binding:"required"`
-	Birthdate  time.Time `json:"birthdate" binding:"required"`
-	Gender     string    `json:"gender" binding:"required"`
-	Residences []string  `json:"residences" binding:"required"`
+	Nickname   string `json:"nickname" binding:"required"`
+	ProfileURI string `json:"profileURI" binding:"required"`
+	Age        int    `json:"age" binding:"required"`
+	Gender     string `json:"gender" binding:"required"`
+	Residence  string `json:"residence" binding:"required"`
 }
