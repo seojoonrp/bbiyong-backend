@@ -19,11 +19,6 @@ import (
 	"github.com/seojoonrp/bbiyong-backend/models"
 )
 
-// @title 삐용(BBIYONG) API
-// @version 1.0
-// @description 어른들의 동심 놀이 매칭 서비스 앱 삐용(BBIYONG)의 백엔드 API 문서입니다.
-// @host localhost:8080
-// @BasePath /api/v1
 func main() {
 	config.LoadConfig()
 

@@ -9,9 +9,6 @@ import (
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
 	"github.com/seojoonrp/bbiyong-backend/api/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRoutes(
@@ -22,8 +19,6 @@ func SetupRoutes(
 	chatHandler *handlers.ChatHandler,
 	friendHandler *handlers.FriendHandler,
 ) {
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
 	apiV1 := router.Group("/api/v1")
 	{
 		apiV1.GET("/ping", func(ctx *gin.Context) {

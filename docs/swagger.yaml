@@ -1,9 +1,0 @@
-basePath: /api/v1
-host: localhost:8080
-info:
-  contact: {}
-  description: 어른들의 동심 놀이 매칭 서비스 앱 삐용(BBIYONG)의 백엔드 API 문서입니다.
-  title: 삐용(BBIYONG) API
-  version: "1.0"
-paths: {}
-swagger: "2.0"
