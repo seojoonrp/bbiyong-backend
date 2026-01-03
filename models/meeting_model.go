@@ -8,12 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Location GeoJSON 구조체
-type Location struct {
-	Type        string    `bson:"type" json:"type"`
-	Coordinates []float64 `bson:"coordinates" json:"coordinates"`
-}
-
 const (
 	MeetingStatusRecruiting = "RECRUITING"
 	MeetingStatusFull       = "FULL"
@@ -25,7 +19,7 @@ type Meeting struct {
 	ID              primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
 	Title           string               `bson:"title" json:"title"`
 	Description     string               `bson:"description" json:"description"`
-	PlaceName       string               `bson:"place_name" json:"placeName"` // 장소 이름 (ex. 율동공원, 서울대 총운동장)
+	PlaceName       string               `bson:"place_name" json:"placeName"`
 	Location        Location             `bson:"location" json:"location"`
 	HostID          primitive.ObjectID   `bson:"host_id" json:"hostID"`
 	Participants    []primitive.ObjectID `bson:"participants" json:"participants"`
