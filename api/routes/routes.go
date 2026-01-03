@@ -38,7 +38,7 @@ func SetupRoutes(
 		protected := apiV1.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
-			protected.POST("/user/profile", authHandler.SetProfile)
+			protected.POST("/auth/profile", authHandler.SetProfile)
 
 			protected.POST("/meetings", meetingHandler.CreateMeeting)
 			protected.GET("/meetings/nearby", meetingHandler.GetNearby)

@@ -20,12 +20,6 @@ const (
 	GenderFemale = "FEMALE"
 )
 
-type Residence struct {
-	Location    Location `bson:"location" json:"location"`
-	FullAddress string   `bson:"full_address" json:"fullAddress"`
-	RegionName  string   `bson:"region_name" json:"regionName"`
-}
-
 type User struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Username     string             `bson:"username" json:"username"`
@@ -35,7 +29,8 @@ type User struct {
 	Age          int                `bson:"age" json:"age"`
 	Gender       string             `bson:"gender" json:"gender"`
 	Level        int                `bson:"level" json:"level"`
-	Residence    Residence          `bson:"residence" json:"residence"`
+	Location     Location           `bson:"location" json:"location"`
+	RegionName   string             `bson:"region_name" json:"regionName"`
 	Provider     string             `bson:"provider" json:"provider"`
 	SocialID     string             `bson:"social_id,omitempty" json:"socialID,omitempty"`
 	SocialEmail  string             `bson:"social_email,omitempty" json:"socialEmail,omitempty"`
@@ -54,9 +49,10 @@ type LoginRequest struct {
 }
 
 type SetProfileRequest struct {
-	Nickname   string    `json:"nickname" binding:"required"`
-	ProfileURI string    `json:"profileURI" binding:"required"`
-	Age        int       `json:"age" binding:"required"`
-	Gender     string    `json:"gender" binding:"required"`
-	Residence  Residence `json:"residence" binding:"required"`
+	Nickname   string   `json:"nickname" binding:"required"`
+	ProfileURI string   `json:"profileURI" binding:"required"`
+	Age        int      `json:"age" binding:"required"`
+	Gender     string   `json:"gender" binding:"required"`
+	Location   Location `json:"location" binding:"required"`
+	RegionName string   `json:"regionName" binding:"required"`
 }
