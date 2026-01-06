@@ -5,6 +5,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
@@ -14,7 +15,7 @@ import (
 
 type MeetingService interface {
 	CreateMeeting(ctx context.Context, hostID string, req models.CreateMeetingRequest) error
-	GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64) ([]models.Meeting, error)
+	GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64, days []string) ([]models.Meeting, error)
 	JoinMeeting(ctx context.Context, meetingID, userID string) error
 	LeaveMeeting(ctx context.Context, meetingID, userID string) error
 }
@@ -29,33 +30,52 @@ func NewMeetingService(repo repositories.MeetingRepository, ec chan<- models.Mee
 }
 
 func (s *meetingService) CreateMeeting(ctx context.Context, hostID string, req models.CreateMeetingRequest) error {
-	hID, _ := primitive.ObjectIDFromHex(hostID)
+	hID, err := primitive.ObjectIDFromHex(hostID)
+	if err != nil {
+		return errors.New("invalid host ID format")
+	}
 
 	meeting := models.Meeting{
-		Title:       req.Title,
-		Description: req.Description,
-		PlaceName:   req.PlaceName,
-		Location: models.Location{
-			Type:        "Point",
-			Coordinates: []float64{req.Longitude, req.Latitude},
-		},
-		HostID:          hID,
-		Participants:    []primitive.ObjectID{hID},
-		MaxParticipants: req.MaxParticipants,
-		AgeRange:        req.AgeRange,
+		Title:           req.Title,
+		Description:     req.Description,
+		Category:        req.Category,
+		ImageURL:        req.ImageURL,
+		PlaceName:       req.PlaceName,
+		Location:        req.Location,
 		MeetingTime:     req.MeetingTime,
+		DayOfWeek:       req.DayOfWeek,
+		AgeRange:        req.AgeRange,
+		HostID:          hID,
 		Status:          models.MeetingStatusRecruiting,
+		ParticipantIDs:  []primitive.ObjectID{hID},
+		MaxParticipants: req.MaxParticipants,
+		SaveCount:       0,
 		CreatedAt:       time.Now(),
 	}
 
 	return s.meetingRepo.Create(ctx, &meeting)
 }
 
-func (s *meetingService) GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64) ([]models.Meeting, error) {
+func (s *meetingService) GetNearbyMeetings(ctx context.Context, lon, lat float64, radius float64, days []string) ([]models.Meeting, error) {
 	if radius == 0 {
 		radius = 3000 // 기본 3km
 	}
-	return s.meetingRepo.FindNearby(ctx, lon, lat, radius)
+
+	var daysInt []int
+	for _, s := range days {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, errors.New("invalid day of week format")
+		}
+
+		if val >= 0 && val <= 6 {
+			daysInt = append(daysInt, val)
+		} else {
+			return nil, errors.New("invalid day of week value")
+		}
+	}
+
+	return s.meetingRepo.FindNearby(ctx, lon, lat, radius, daysInt)
 }
 
 func (s *meetingService) JoinMeeting(ctx context.Context, meetingID string, userID string) error {

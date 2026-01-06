@@ -95,7 +95,7 @@ func (s *chatService) verifyParticipant(ctx context.Context, mID, uID primitive.
 		return errors.New("meeting not found")
 	}
 
-	for _, pID := range meeting.Participants {
+	for _, pID := range meeting.ParticipantIDs {
 		if pID == uID {
 			return nil
 		}

@@ -4,6 +4,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
 
@@ -16,9 +17,10 @@ import (
 type MeetingRepository interface {
 	Create(ctx context.Context, meeting *models.Meeting) error
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Meeting, error)
-	FindNearby(ctx context.Context, lon, lat float64, radiusMeter float64) ([]models.Meeting, error)
+	FindNearby(ctx context.Context, lon, lat float64, radiusMeter float64, days []int) ([]models.Meeting, error)
 	AddParticipant(ctx context.Context, meetingID, userID primitive.ObjectID, maxParticipants int) (bool, error)
 	RemoveParticipant(ctx context.Context, meetingID, userID primitive.ObjectID, maxParticipants int) (bool, error)
+	IncrementSaveCount(ctx context.Context, meetingID primitive.ObjectID) error
 }
 
 type meetingRepository struct {
@@ -48,10 +50,10 @@ func (r *meetingRepository) FindByID(ctx context.Context, id primitive.ObjectID)
 	return &meeting, nil
 }
 
-func (r *meetingRepository) FindNearby(ctx context.Context, lon, lat float64, radiusMeter float64) ([]models.Meeting, error) {
+func (r *meetingRepository) FindNearby(ctx context.Context, lon, lat float64, radiusMeter float64, days []int) ([]models.Meeting, error) {
 	var meetings []models.Meeting
 
-	// MongoDB의 개쩌는 공간 쿼리
+	// 몽고디비의 개쩌는 공간 쿼리
 	filter := bson.M{
 		"location": bson.M{
 			"$near": bson.M{
@@ -62,6 +64,10 @@ func (r *meetingRepository) FindNearby(ctx context.Context, lon, lat float64, ra
 				"$maxDistance": radiusMeter,
 			},
 		},
+	}
+
+	if len(days) > 0 {
+		filter["day_of_week"] = bson.M{"$in": days}
 	}
 
 	cursor, err := r.collection.Find(ctx, filter)
@@ -133,4 +139,20 @@ func (r *meetingRepository) RemoveParticipant(ctx context.Context, meetingID pri
 	}
 
 	return true, nil
+}
+
+func (r *meetingRepository) IncrementSaveCount(ctx context.Context, meetingID primitive.ObjectID) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": meetingID},
+		bson.M{"$inc": bson.M{"save_count": 1}},
+	)
+	if err != nil {
+		return err
+	}
+	if result.ModifiedCount == 0 {
+		return errors.New("meeting not found")
+	}
+
+	return nil
 }

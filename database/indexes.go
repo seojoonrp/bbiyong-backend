@@ -18,6 +18,7 @@ func EnsureIndexes(client *mongo.Client) {
 	initMeetingIndexes(db.Collection("meetings"))
 	initChatIndexes(db.Collection("chats"))
 	initFriendshipIndexes(db.Collection("friendships"))
+	initSaveIndexes(db.Collection("saves"))
 }
 
 func initUserIndexes(coll *mongo.Collection) {
@@ -66,6 +67,17 @@ func initFriendshipIndexes(coll *mongo.Collection) {
 			{Key: "status", Value: 1},
 		},
 		Options: options.Index().SetName("idx_received_requests"),
+	})
+}
+
+func initSaveIndexes(coll *mongo.Collection) {
+	// Unique 유저-모임 쌍
+	createIndex(coll, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "user_id", Value: 1},
+			{Key: "meeting_id", Value: 1},
+		},
+		Options: options.Index().SetUnique(true).SetName("idx_unique_user_meeting_save"),
 	})
 }
 

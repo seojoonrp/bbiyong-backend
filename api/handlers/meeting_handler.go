@@ -37,11 +37,17 @@ func (h *MeetingHandler) CreateMeeting(c *gin.Context) {
 }
 
 func (h *MeetingHandler) GetNearby(c *gin.Context) {
-	lat, _ := strconv.ParseFloat(c.Query("latitude"), 64)
-	lon, _ := strconv.ParseFloat(c.Query("longitude"), 64)
-	radius, _ := strconv.ParseFloat(c.Query("radius"), 64)
+	lat, err := strconv.ParseFloat(c.Query("latitude"), 64)
+	lon, err := strconv.ParseFloat(c.Query("longitude"), 64)
+	radius, err := strconv.ParseFloat(c.Query("radius"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid location query parameters"})
+		return
+	}
 
-	meetings, err := h.service.GetNearbyMeetings(c.Request.Context(), lon, lat, radius)
+	daysStr := c.QueryArray("day_of_week")
+
+	meetings, err := h.service.GetNearbyMeetings(c.Request.Context(), lon, lat, radius, daysStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
