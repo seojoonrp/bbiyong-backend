@@ -34,3 +34,21 @@ func (h *SaveHandler) SaveMeeting(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "meeting saved successfully"})
 }
+
+func (h *SaveHandler) UnsaveMeeting(c *gin.Context) {
+	userID, err := GetUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	mIDStr := c.Param("id")
+
+	err = h.saveService.UnsaveMeeting(c.Request.Context(), userID, mIDStr)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "meeting unsaved successfully"})
+}

@@ -45,10 +45,11 @@ func SetupRoutes(
 			protected.GET("/meetings/nearby", meetingHandler.GetNearby)
 			protected.POST("/meetings/:id/join", meetingHandler.Join)
 			protected.POST("/meetings/:id/leave", meetingHandler.Leave)
+			protected.POST("/meetings/:id/save", saveHandler.SaveMeeting)
+			protected.DELETE("/meetings/:id/save", saveHandler.UnsaveMeeting)
 
 			protected.GET("/ws/meetings/:id", chatHandler.ChatConnect)
 			protected.GET("/meetings/:id/chats", chatHandler.GetChatHistory)
-			protected.POST("/meetings/:id/save", saveHandler.SaveMeeting)
 
 			protected.POST("/users/:id/friend", friendHandler.RequestFriend)
 			protected.PATCH("/friendships/:id/accept", friendHandler.AcceptFriend)

@@ -15,6 +15,7 @@ import (
 
 type SaveService interface {
 	SaveMeeting(ctx context.Context, userID, meetingID string) error
+	UnsaveMeeting(ctx context.Context, userID, meetingID string) error
 }
 
 type saveService struct {
@@ -31,9 +32,13 @@ func NewSaveService(sr repositories.SaveRepository, mr repositories.MeetingRepos
 
 func (s *saveService) SaveMeeting(ctx context.Context, userID, meetingID string) error {
 	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return apperr.InternalServerError("invalid user ID in token", err)
+	}
+
 	mID, err := primitive.ObjectIDFromHex(meetingID)
 	if err != nil {
-		return apperr.BadRequest("invalid ID format", err)
+		return apperr.BadRequest("invalid meeting ID format", err)
 	}
 
 	err = s.saveRepo.Create(ctx, &models.Save{
@@ -51,6 +56,33 @@ func (s *saveService) SaveMeeting(ctx context.Context, userID, meetingID string)
 	err = s.meetingRepo.IncrementSaveCount(ctx, mID)
 	if err != nil {
 		return apperr.InternalServerError("failed to increment save count", err)
+	}
+
+	return nil
+}
+
+func (s *saveService) UnsaveMeeting(ctx context.Context, userID, meetingID string) error {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return apperr.InternalServerError("invalid user ID in token", err)
+	}
+
+	mID, err := primitive.ObjectIDFromHex(meetingID)
+	if err != nil {
+		return apperr.BadRequest("invalid meeting ID format", err)
+	}
+
+	deletedCount, err := s.saveRepo.Delete(ctx, uID, mID)
+	if err != nil {
+		return apperr.InternalServerError("failed to delete save record", err)
+	}
+	if deletedCount == 0 {
+		return apperr.NotFound("save record not found", nil)
+	}
+
+	err = s.meetingRepo.DecrementSaveCount(ctx, mID)
+	if err != nil {
+		return apperr.InternalServerError("failed to decrement save count", err)
 	}
 
 	return nil

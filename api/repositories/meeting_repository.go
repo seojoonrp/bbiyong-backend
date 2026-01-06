@@ -21,6 +21,7 @@ type MeetingRepository interface {
 	AddParticipant(ctx context.Context, meetingID, userID primitive.ObjectID, maxParticipants int) (bool, error)
 	RemoveParticipant(ctx context.Context, meetingID, userID primitive.ObjectID, maxParticipants int) (bool, error)
 	IncrementSaveCount(ctx context.Context, meetingID primitive.ObjectID) error
+	DecrementSaveCount(ctx context.Context, meetingID primitive.ObjectID) error
 }
 
 type meetingRepository struct {
@@ -152,6 +153,25 @@ func (r *meetingRepository) IncrementSaveCount(ctx context.Context, meetingID pr
 	}
 	if result.ModifiedCount == 0 {
 		return errors.New("meeting not found")
+	}
+
+	return nil
+}
+
+func (r *meetingRepository) DecrementSaveCount(ctx context.Context, meetingID primitive.ObjectID) error {
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id":        meetingID,
+			"save_count": bson.M{"$gt": 0},
+		},
+		bson.M{"$inc": bson.M{"save_count": -1}},
+	)
+	if err != nil {
+		return err
+	}
+	if result.ModifiedCount == 0 {
+		return errors.New("meeting not found or save count is already zero")
 	}
 
 	return nil
