@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/events"
 	"github.com/seojoonrp/bbiyong-backend/api/handlers"
+	"github.com/seojoonrp/bbiyong-backend/api/middleware"
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
 	"github.com/seojoonrp/bbiyong-backend/api/routes"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
@@ -39,22 +40,26 @@ func main() {
 	meetingRepo := repositories.NewMeetingRepository(db)
 	chatRepo := repositories.NewChatRepository(db)
 	friendRepo := repositories.NewFriendRepository(db)
+	saveRepo := repositories.NewSaveRepository(db)
 
 	authService := services.NewAuthService(userRepo)
 	userService := services.NewUserService(userRepo)
 	meetingService := services.NewMeetingService(meetingRepo, meetingEventChan)
 	chatService := services.NewChatService(chatRepo, userRepo, meetingRepo)
 	friendService := services.NewFriendService(friendRepo)
+	saveService := services.NewSaveService(saveRepo, meetingRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	meetingHandler := handlers.NewMeetingHandler(meetingService)
-	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService)
+	chatHandler := handlers.NewChatHandler(chatHub, chatService, userService, meetingService)
 	friendHandler := handlers.NewFriendHandler(friendService)
+	saveHandler := handlers.NewSaveHandler(saveService)
 
 	go events.StartMeetingWorker(meetingEventChan, chatService, chatHub)
 
 	router := gin.Default()
 	router.Use(cors.Default())
+	router.Use(middleware.ErrorHandler())
 	router.SetTrustedProxies(nil)
 
 	routes.SetupRoutes(
@@ -64,6 +69,7 @@ func main() {
 		meetingHandler,
 		chatHandler,
 		friendHandler,
+		saveHandler,
 	)
 
 	port := config.AppConfig.Port

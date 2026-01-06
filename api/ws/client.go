@@ -5,20 +5,17 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"github.com/gorilla/websocket"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Client struct {
 	Hub              *Hub
 	Conn             *websocket.Conn
 	Send             chan []byte
-	MeetingID        primitive.ObjectID
-	UserID           primitive.ObjectID
+	MeetingID        string
+	UserID           string
 	SenderName       string
 	SenderProfileURI string
 	ChatService      services.ChatService
@@ -39,15 +36,15 @@ func (c *Client) ReadPump() {
 			break // 연결이 뭔가 이상해졌을 때
 		}
 
-		savedMsg, err := c.ChatService.SaveMessage(c.Ctx, c.MeetingID, c.UserID, string(message), c.SenderName, c.SenderProfileURI)
+		savedMsg, err := c.ChatService.SaveMessage(context.Background(), c.MeetingID, c.UserID, string(message), c.SenderName, c.SenderProfileURI)
 		if err != nil {
-			log.Println("Error saving message:", err)
+			c.sendError("Failed to save message:" + err.Error())
 			continue
 		}
 
 		finalJson, err := json.Marshal(savedMsg)
 		if err != nil {
-			log.Println("Error marshaling message:", err)
+			c.sendError("Internal data error:" + err.Error())
 			continue
 		}
 
@@ -69,4 +66,17 @@ func (c *Client) WritePump() {
 		}
 		c.Conn.WriteMessage(websocket.TextMessage, message)
 	}
+}
+
+type ErrorResponse struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
+func (c *Client) sendError(msg string) {
+	errPayload, _ := json.Marshal(ErrorResponse{
+		Type:    "ERROR",
+		Message: msg,
+	})
+	c.Send <- errPayload
 }

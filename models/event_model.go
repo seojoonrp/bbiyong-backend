@@ -2,8 +2,6 @@
 
 package models
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 const (
 	EventJoinMeeting  = "JOIN"
 	EventLeaveMeeting = "LEAVE"
@@ -11,6 +9,6 @@ const (
 
 type MeetingEvent struct {
 	Type      string
-	MeetingID primitive.ObjectID
-	UserID    primitive.ObjectID
+	MeetingID string
+	UserID    string
 }

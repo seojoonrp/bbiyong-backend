@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
+	"github.com/seojoonrp/bbiyong-backend/apperr"
 	"github.com/seojoonrp/bbiyong-backend/models"
 )
 
@@ -20,20 +21,24 @@ func NewMeetingHandler(s services.MeetingService) *MeetingHandler {
 }
 
 func (h *MeetingHandler) CreateMeeting(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID, err := GetUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
 
 	var req models.CreateMeetingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
-	if err := h.service.CreateMeeting(c.Request.Context(), userID.(string), req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateMeeting(c.Request.Context(), userID, req); err != nil {
+		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "meeting successfully created"})
+	c.JSON(http.StatusCreated, gin.H{"message": "successfully created meeting"})
 }
 
 func (h *MeetingHandler) GetNearby(c *gin.Context) {
@@ -41,7 +46,7 @@ func (h *MeetingHandler) GetNearby(c *gin.Context) {
 	lon, err := strconv.ParseFloat(c.Query("longitude"), 64)
 	radius, err := strconv.ParseFloat(c.Query("radius"), 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid location query parameters"})
+		c.Error(apperr.BadRequest("invalid location query parameters", err))
 		return
 	}
 
@@ -49,7 +54,7 @@ func (h *MeetingHandler) GetNearby(c *gin.Context) {
 
 	meetings, err := h.service.GetNearbyMeetings(c.Request.Context(), lon, lat, radius, daysStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -57,12 +62,17 @@ func (h *MeetingHandler) GetNearby(c *gin.Context) {
 }
 
 func (h *MeetingHandler) Join(c *gin.Context) {
-	meetingID := c.Param("id")
-	userID, _ := c.Get("user_id")
-
-	err := h.service.JoinMeeting(c.Request.Context(), meetingID, userID.(string))
+	userID, err := GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
+		return
+	}
+
+	meetingID := c.Param("id")
+
+	err = h.service.JoinMeeting(c.Request.Context(), meetingID, userID)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -70,12 +80,17 @@ func (h *MeetingHandler) Join(c *gin.Context) {
 }
 
 func (h *MeetingHandler) Leave(c *gin.Context) {
-	meetingID := c.Param("id")
-	userID, _ := c.Get("user_id")
-
-	err := h.service.LeaveMeeting(c.Request.Context(), meetingID, userID.(string))
+	userID, err := GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
+		return
+	}
+
+	meetingID := c.Param("id")
+
+	err = h.service.LeaveMeeting(c.Request.Context(), meetingID, userID)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 

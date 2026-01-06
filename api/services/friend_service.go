@@ -4,18 +4,18 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
+	"github.com/seojoonrp/bbiyong-backend/apperr"
 	"github.com/seojoonrp/bbiyong-backend/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type FriendService interface {
-	RequestFriend(ctx context.Context, reqID, addID primitive.ObjectID) error
-	AcceptFriend(ctx context.Context, fID, uID primitive.ObjectID) error
-	ListFriends(ctx context.Context, userID primitive.ObjectID, status string) ([]models.FriendInfo, error)
+	RequestFriend(ctx context.Context, userID, targetID string) error
+	AcceptFriend(ctx context.Context, userID, friendshipID string) error
+	ListFriends(ctx context.Context, userID string, status string) ([]models.FriendInfo, error)
 }
 
 type friendService struct {
@@ -26,45 +26,89 @@ func NewFriendService(fr repositories.FriendRepository) FriendService {
 	return &friendService{friendRepo: fr}
 }
 
-func (s *friendService) RequestFriend(ctx context.Context, reqID, addID primitive.ObjectID) error {
-	if reqID == addID {
-		return errors.New("cannot friend yourself")
+func (s *friendService) RequestFriend(ctx context.Context, userID, targetID string) error {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return apperr.InternalServerError("invalid user ID in token", err)
 	}
 
-	existing, _ := s.friendRepo.FindByUserIDs(ctx, reqID, addID)
+	tID, err := primitive.ObjectIDFromHex(targetID)
+	if err != nil {
+		return apperr.BadRequest("invalid target user ID format", err)
+	}
+
+	if uID == tID {
+		return apperr.BadRequest("cannot friend yourself", nil)
+	}
+
+	existing, err := s.friendRepo.FindByUserIDs(ctx, uID, tID)
+	if err != nil {
+		return apperr.InternalServerError("failed to check existing friendship", err)
+	}
 	if existing != nil {
-		return errors.New("friendship already exists or is pending")
+		return apperr.BadRequest("friend request already exists", nil)
 	}
 
 	friendship := &models.Friendship{
 		ID:          primitive.NewObjectID(),
-		RequesterID: reqID,
-		AddresseeID: addID,
+		RequesterID: uID,
+		AddresseeID: tID,
 		Status:      models.FriendStatusPending,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	return s.friendRepo.SendRequest(ctx, friendship)
+
+	err = s.friendRepo.SendRequest(ctx, friendship)
+	if err != nil {
+		return apperr.InternalServerError("failed to send friend request", err)
+	}
+
+	return nil
 }
 
-func (s *friendService) AcceptFriend(ctx context.Context, fID, uID primitive.ObjectID) error {
+func (s *friendService) AcceptFriend(ctx context.Context, userID, friendshipID string) error {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return apperr.InternalServerError("invalid user ID in token", err)
+	}
+
+	fID, err := primitive.ObjectIDFromHex(friendshipID)
+	if err != nil {
+		return apperr.BadRequest("invalid friendship ID format", err)
+	}
+
 	friendship, err := s.friendRepo.FindByID(ctx, fID)
 	if err != nil {
-		return err
+		return apperr.InternalServerError("failed to fetch friendship", err)
 	}
 	if friendship == nil {
-		return errors.New("friendship not found")
+		return apperr.NotFound("friendship not found", nil)
 	}
 	if friendship.AddresseeID != uID {
-		return errors.New("you are not the addressee of the friend request")
+		return apperr.Forbidden("you are not the addressee of the friend request", nil)
 	}
 	if friendship.Status != models.FriendStatusPending {
-		return errors.New("friendship is not in a pending state")
+		return apperr.BadRequest("friendship is not in a pending state", nil)
 	}
 
-	return s.friendRepo.UpdateStatus(ctx, fID, models.FriendStatusAccepted)
+	err = s.friendRepo.UpdateStatus(ctx, fID, models.FriendStatusAccepted)
+	if err != nil {
+		return apperr.InternalServerError("failed to update friendship status", err)
+	}
+
+	return nil
 }
 
-func (s *friendService) ListFriends(ctx context.Context, uID primitive.ObjectID, status string) ([]models.FriendInfo, error) {
-	return s.friendRepo.GetFriendList(ctx, uID, status)
+func (s *friendService) ListFriends(ctx context.Context, userID string, status string) ([]models.FriendInfo, error) {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, apperr.InternalServerError("invalid user ID in token", err)
+	}
+
+	friendInfos, err := s.friendRepo.GetFriendList(ctx, uID, status)
+	if err != nil {
+		return nil, apperr.InternalServerError("failed to get friend list", err)
+	}
+
+	return friendInfos, nil
 }

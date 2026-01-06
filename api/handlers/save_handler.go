@@ -18,18 +18,17 @@ func NewSaveHandler(ss services.SaveService) *SaveHandler {
 }
 
 func (h *SaveHandler) SaveMeeting(c *gin.Context) {
-	uIDVal, _ := c.Get("user_id")
-	uIDStr, ok := uIDVal.(string)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+	userID, err := GetUserID(c)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
 	mIDStr := c.Param("id")
 
-	err := h.saveService.SaveMeeting(c.Request.Context(), uIDStr, mIDStr)
+	err = h.saveService.SaveMeeting(c.Request.Context(), userID, mIDStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 

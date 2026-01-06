@@ -1,4 +1,4 @@
-// utils/jwt_utils.go
+// utils/jwt.go
 
 package utils
 

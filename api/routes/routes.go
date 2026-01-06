@@ -18,6 +18,7 @@ func SetupRoutes(
 	meetingHandler *handlers.MeetingHandler,
 	chatHandler *handlers.ChatHandler,
 	friendHandler *handlers.FriendHandler,
+	saveHandler *handlers.SaveHandler,
 ) {
 	apiV1 := router.Group("/api/v1")
 	{
@@ -47,6 +48,7 @@ func SetupRoutes(
 
 			protected.GET("/ws/meetings/:id", chatHandler.ChatConnect)
 			protected.GET("/meetings/:id/chats", chatHandler.GetChatHistory)
+			protected.POST("/meetings/:id/save", saveHandler.SaveMeeting)
 
 			protected.POST("/users/:id/friend", friendHandler.RequestFriend)
 			protected.PATCH("/friendships/:id/accept", friendHandler.AcceptFriend)

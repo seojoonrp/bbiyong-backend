@@ -4,19 +4,18 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
+	"github.com/seojoonrp/bbiyong-backend/apperr"
 	"github.com/seojoonrp/bbiyong-backend/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ChatService interface {
-	SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error)
-	SaveSystemMessage(ctx context.Context, mID, uID primitive.ObjectID, eventType string) (*models.ChatMessage, error)
-	CheckParticipation(ctx context.Context, mID, uID primitive.ObjectID) (bool, error)
-	GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error)
+	SaveMessage(ctx context.Context, meetingID, userID string, content, name, profile string) (*models.ChatMessage, error)
+	SaveSystemMessage(ctx context.Context, meetingID, userID string, eventType string) (*models.ChatMessage, error)
+	GetChatHistory(ctx context.Context, meetingID string, limit int64) ([]models.ChatMessage, error)
 }
 
 type chatService struct {
@@ -29,7 +28,17 @@ func NewChatService(cr repositories.ChatRepository, ur repositories.UserReposito
 	return &chatService{chatRepo: cr, userRepo: ur, meetingRepo: mr}
 }
 
-func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.ObjectID, content, name, profile string) (*models.ChatMessage, error) {
+func (s *chatService) SaveMessage(ctx context.Context, meetingID, userID string, content, name, profile string) (*models.ChatMessage, error) {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, apperr.InternalServerError("invalid user ID in token", err)
+	}
+
+	mID, err := primitive.ObjectIDFromHex(meetingID)
+	if err != nil {
+		return nil, apperr.BadRequest("invalid meeting ID format", err)
+	}
+
 	msg := &models.ChatMessage{
 		ID:               primitive.NewObjectID(),
 		MeetingID:        mID,
@@ -41,17 +50,31 @@ func (s *chatService) SaveMessage(ctx context.Context, mID, uID primitive.Object
 		CreatedAt:        time.Now(),
 	}
 
-	err := s.chatRepo.SaveMessage(ctx, msg)
-	return msg, err
+	err = s.chatRepo.SaveMessage(ctx, msg)
+	if err != nil {
+		return nil, apperr.InternalServerError("failed to save message", err)
+	}
+
+	return msg, nil
 }
 
-func (s *chatService) SaveSystemMessage(ctx context.Context, mID, uID primitive.ObjectID, eventType string) (*models.ChatMessage, error) {
+func (s *chatService) SaveSystemMessage(ctx context.Context, meetingID, userID string, eventType string) (*models.ChatMessage, error) {
+	uID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, apperr.InternalServerError("invalid user ID in token", err)
+	}
+
+	mID, err := primitive.ObjectIDFromHex(meetingID)
+	if err != nil {
+		return nil, apperr.BadRequest("invalid meeting ID format", err)
+	}
+
 	user, err := s.userRepo.FindByID(ctx, uID)
 	if err != nil {
-		return nil, err
+		return nil, apperr.InternalServerError("failed to fetch user by ID", err)
 	}
 	if user == nil {
-		return nil, errors.New("user not found")
+		return nil, apperr.NotFound("user not found", nil)
 	}
 
 	var content, chatType string
@@ -80,45 +103,29 @@ func (s *chatService) SaveSystemMessage(ctx context.Context, mID, uID primitive.
 
 	err = s.chatRepo.SaveMessage(ctx, msg)
 	if err != nil {
-		return nil, err
+		return nil, apperr.InternalServerError("failed to save system message", err)
 	}
 
 	return msg, nil
 }
 
-func (s *chatService) verifyParticipant(ctx context.Context, mID, uID primitive.ObjectID) error {
-	meeting, err := s.meetingRepo.FindByID(ctx, mID)
+func (s *chatService) GetChatHistory(ctx context.Context, meetingID string, limit int64) ([]models.ChatMessage, error) {
+	mID, err := primitive.ObjectIDFromHex(meetingID)
 	if err != nil {
-		return err
-	}
-	if meeting == nil {
-		return errors.New("meeting not found")
+		return nil, apperr.BadRequest("invalid meeting ID format", err)
 	}
 
-	for _, pID := range meeting.ParticipantIDs {
-		if pID == uID {
-			return nil
-		}
+	if limit <= 0 {
+		return nil, apperr.BadRequest("limit must be greater than zero", nil)
+	}
+	if limit > 100 {
+		return nil, apperr.BadRequest("cannot fetch more than 100 messages at once", nil)
 	}
 
-	return errors.New("you are not a participant of the meeting")
-}
-
-func (s *chatService) CheckParticipation(ctx context.Context, mID, uID primitive.ObjectID) (bool, error) {
-	err := s.verifyParticipant(ctx, mID, uID)
+	history, err := s.chatRepo.GetChatHistory(ctx, mID, limit)
 	if err != nil {
-		if err.Error() == "you are not a participant of the meeting" {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func (s *chatService) GetChatHistory(ctx context.Context, mID, uID primitive.ObjectID, limit int64) ([]models.ChatMessage, error) {
-	if err := s.verifyParticipant(ctx, mID, uID); err != nil {
-		return nil, err
+		return nil, apperr.InternalServerError("failed to get chat history", err)
 	}
 
-	return s.chatRepo.GetChatHistory(ctx, mID, limit)
+	return history, nil
 }

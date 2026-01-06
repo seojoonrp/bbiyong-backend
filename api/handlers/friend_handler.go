@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
 	"github.com/seojoonrp/bbiyong-backend/models"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type FriendHandler struct {
@@ -20,18 +19,16 @@ func NewFriendHandler(fs services.FriendService) *FriendHandler {
 }
 
 func (h *FriendHandler) RequestFriend(c *gin.Context) {
-	myIDStr, _ := c.Get("user_id")
-	targetIDStr := c.Param("id")
-
-	myID, err := primitive.ObjectIDFromHex(myIDStr.(string))
-	targetID, err := primitive.ObjectIDFromHex(targetIDStr)
+	userID, err := GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user or target id"})
+		c.Error(err)
 		return
 	}
 
-	if err := h.friendService.RequestFriend(c.Request.Context(), myID, targetID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	targetID := c.Param("id")
+
+	if err := h.friendService.RequestFriend(c.Request.Context(), userID, targetID); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -39,18 +36,16 @@ func (h *FriendHandler) RequestFriend(c *gin.Context) {
 }
 
 func (h *FriendHandler) AcceptFriend(c *gin.Context) {
-	myIDStr, _ := c.Get("user_id")
-	friendshipIDStr := c.Param("id")
-
-	myID, err := primitive.ObjectIDFromHex(myIDStr.(string))
-	fID, err := primitive.ObjectIDFromHex(friendshipIDStr)
+	userID, err := GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user or friendship id"})
+		c.Error(err)
 		return
 	}
 
-	if err := h.friendService.AcceptFriend(c.Request.Context(), fID, myID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	friendshipID := c.Param("id")
+
+	if err := h.friendService.AcceptFriend(c.Request.Context(), userID, friendshipID); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -58,18 +53,17 @@ func (h *FriendHandler) AcceptFriend(c *gin.Context) {
 }
 
 func (h *FriendHandler) GetFriendList(c *gin.Context) {
-	myIDStr, _ := c.Get("user_id")
-	myID, err := primitive.ObjectIDFromHex(myIDStr.(string))
+	userID, err := GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		c.Error(err)
 		return
 	}
 
-	status := c.DefaultQuery("status", "ACCEPTED")
+	status := c.Query("status")
 
-	friends, err := h.friendService.ListFriends(c.Request.Context(), myID, status)
+	friends, err := h.friendService.ListFriends(c.Request.Context(), userID, status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch friend list: " + err.Error()})
+		c.Error(err)
 		return
 	}
 

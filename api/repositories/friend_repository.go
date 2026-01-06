@@ -57,12 +57,23 @@ func (r *friendRepository) FindByUserIDs(ctx context.Context, uID1, uID2 primiti
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
+
 	return &f, err
 }
 
 func (r *friendRepository) UpdateStatus(ctx context.Context, fID primitive.ObjectID, status string) error {
-	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": fID}, bson.M{"$set": bson.M{"status": status, "updated_at": time.Now()}})
-	return err
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": fID}, bson.M{"$set": bson.M{"status": status, "updated_at": time.Now()}},
+	)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
 }
 
 func (r *friendRepository) GetFriendList(ctx context.Context, uID primitive.ObjectID, status string) ([]models.FriendInfo, error) {

@@ -4,11 +4,10 @@ package services
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/seojoonrp/bbiyong-backend/api/repositories"
+	"github.com/seojoonrp/bbiyong-backend/apperr"
 	"github.com/seojoonrp/bbiyong-backend/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,7 +33,7 @@ func (s *saveService) SaveMeeting(ctx context.Context, userID, meetingID string)
 	uID, err := primitive.ObjectIDFromHex(userID)
 	mID, err := primitive.ObjectIDFromHex(meetingID)
 	if err != nil {
-		return errors.New("invalid ID format")
+		return apperr.BadRequest("invalid ID format", err)
 	}
 
 	err = s.saveRepo.Create(ctx, &models.Save{
@@ -44,14 +43,14 @@ func (s *saveService) SaveMeeting(ctx context.Context, userID, meetingID string)
 	})
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			return errors.New("meeting already saved")
+			return apperr.Conflict("meeting already saved", err)
 		}
-		return err
+		return apperr.InternalServerError("failed to save meeting", err)
 	}
 
 	err = s.meetingRepo.IncrementSaveCount(ctx, mID)
 	if err != nil {
-		return fmt.Errorf("failed to increment save count: %v", err)
+		return apperr.InternalServerError("failed to increment save count", err)
 	}
 
 	return nil

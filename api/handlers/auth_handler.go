@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bbiyong-backend/api/services"
+	"github.com/seojoonrp/bbiyong-backend/apperr"
 	"github.com/seojoonrp/bbiyong-backend/models"
 )
 
@@ -21,13 +22,13 @@ func NewAuthHandler(service services.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
 	err := h.authService.Register(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register user: " + err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -37,13 +38,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
 	token, user, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -60,13 +61,13 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
 	isNewUser, token, user, err := h.authService.LoginWithGoogle(c.Request.Context(), req.IDToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to login with Google: " + err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -78,18 +79,18 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 }
 
 func (h *AuthHandler) KakaoLogin(c *gin.Context) {
-	var input struct {
+	var req struct {
 		AccessToken string `json:"accessToken" binding:"required"`
 	}
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
-	isNew, token, user, err := h.authService.LoginWithKakao(c.Request.Context(), input.AccessToken)
+	isNew, token, user, err := h.authService.LoginWithKakao(c.Request.Context(), req.AccessToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Kakao login failed"})
+		c.Error(err)
 		return
 	}
 
@@ -101,7 +102,7 @@ func (h *AuthHandler) KakaoLogin(c *gin.Context) {
 }
 
 func (h *AuthHandler) AppleLogin(c *gin.Context) {
-	var input struct {
+	var req struct {
 		IdentityToken string `json:"identityToken" binding:"required"`
 		FullName      struct {
 			GivenName  string `json:"givenName"`
@@ -109,15 +110,15 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		} `json:"fullName"`
 	}
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
-	isNew, token, user, err := h.authService.LoginWithApple(c.Request.Context(), input.IdentityToken)
+	isNew, token, user, err := h.authService.LoginWithApple(c.Request.Context(), req.IdentityToken)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Apple login failed"})
+		c.Error(err)
 		return
 	}
 
@@ -131,13 +132,13 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 func (h *AuthHandler) CheckUsername(c *gin.Context) {
 	username := c.Query("username")
 	if username == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "username query parameter is required"})
+		c.Error(apperr.BadRequest("username query parameter is required", nil))
 		return
 	}
 
 	available, err := h.authService.IsUsernameAvailable(c.Request.Context(), username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check username availability: " + err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -145,21 +146,21 @@ func (h *AuthHandler) CheckUsername(c *gin.Context) {
 }
 
 func (h *AuthHandler) SetProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	userID, err := GetUserID(c)
+	if err != nil {
+		c.Error(err)
 		return
 	}
 
 	var req models.SetProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperr.BadRequest("invalid request body", err))
 		return
 	}
 
-	err := h.authService.CompleteProfile(c.Request.Context(), userID.(string), req)
+	err = h.authService.CompleteProfile(c.Request.Context(), userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to complete profile: " + err.Error()})
+		c.Error(err)
 		return
 	}
 
